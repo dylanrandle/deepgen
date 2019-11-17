@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import os
+import utils
 
 # Follows elements of https://github.com/pytorch/examples/blob/master/vae/main.py
 class AutoEncoder(nn.Module):
@@ -11,69 +12,83 @@ class AutoEncoder(nn.Module):
     Uses ResNet-style blocks of convolutions
     Concatenates CelebA attributes to latent dimension
     """
-    def __init__(self, latent_dim = 100, condition_dim = 40):
+    def __init__(self, latent_dim = 512, condition_dim = 40):
         super().__init__()
         self.latent_dim = latent_dim
         self.condition_dim = condition_dim
 
-        # first layer of ResNet-34 (original implementation for ImageNet)
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-        self.bn1 = nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+        self.maxpool = nn.MaxPool2d(kernel_size = 3, stride = 2, padding = 1, dilation = 1, ceil_mode = False)
 
-        # first encoding block
-        self.layer1 = nn.Sequential(
-            ResidualBlock(64, 64),
-            ResidualBlock(64, 64),
-            ResidualBlock(64, 64)
+        # first encoding layer (similar to first layer of original ResNet)
+        self.encode1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2), bias=False),
+            nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+            self.relu,
+            self.maxpool,
         )
 
         # second encoding block
-        self.resid1 = nn.Sequential(conv3x3(64, 128), nn.BatchNorm2d(128))
-        self.layer2 = nn.Sequential(
-            ResidualBlock(64, 128, residual_op = self.resid1),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
+        self.encode2 = nn.Sequential(
+            ResidualBlock(64, 64),
+            ResidualBlock(64, 64),
+            ResidualBlock(64, 64),
+            self.maxpool,
         )
 
-        # reduce dimension with average pool before latent space
-        self.avgpool = nn.AvgPool2d(kernel_size = 3, stride = 2, padding = 1, ceil_mode = False)
+        # third encoding block
+        self.encode3 = nn.Sequential(
+            ResidualBlock(64, 128,
+                residual_op = nn.Sequential(conv3x3(64, 128), nn.BatchNorm2d(128))
+            ),
+            ResidualBlock(128, 128),
+            ResidualBlock(128, 128),
+            self.maxpool,
+        )
 
         # projecting the last feature map into latent space (linear)
         self.flat = nn.Flatten()
-        self.mu_latent = nn.Linear(128 * 32 * 32, self.latent_dim)
-        self.sig_latent = nn.Linear(128 * 32 * 32, self.latent_dim)
+        self.mu_latent = nn.Linear(128 * 16 * 16, self.latent_dim)
+        self.sig_latent = nn.Linear(128 * 16 * 16, self.latent_dim)
 
         # projecting out of latent space (non-linear)
         self.project_z = nn.Sequential(
-            nn.Linear(self.latent_dim + self.condition_dim, 64 * 64),
-            self.relu,
+            nn.Linear(self.latent_dim + self.condition_dim, 128 * 128),
+            nn.ReLU(inplace=True),
         )
 
         # first decoding block
         self.decode1 = nn.Sequential(
-            ResidualBlock(1, 64),
-            ResidualBlock(64, 64),
-            ResidualBlock(64, 64),
             nn.Upsample(scale_factor = (2,2)),
+            ResidualBlock(1, 128),
+            ResidualBlock(128, 128),
+            ResidualBlock(128, 128),
         )
 
         # second decoding block
-        self.resid2 = nn.Sequential(conv3x3(64, 32), nn.BatchNorm2d(32))
         self.decode2 = nn.Sequential(
-            ResidualBlock(64, 32, residual_op = self.resid2),
-            ResidualBlock(32, 32),
-            ResidualBlock(32, 32),
             nn.Upsample(scale_factor = (2,2)),
+            ResidualBlock(128, 64,
+                residual_op = nn.Sequential(conv3x3(128, 64), nn.BatchNorm2d(64))
+            ),
+            ResidualBlock(64, 64),
+            ResidualBlock(64, 64),
+        )
+
+        # second decoding block
+        self.decode3 = nn.Sequential(
+            nn.Upsample(scale_factor = (2,2)),
+            ResidualBlock(64, 32,
+                residual_op = nn.Sequential(conv3x3(64, 32), nn.BatchNorm2d(32))
+            ),
+            ResidualBlock(32, 32),
+            ResidualBlock(32, 32),
         )
 
         # final decoding block
-        self.resid3 = nn.Sequential(conv3x3(32, 3), nn.BatchNorm2d(3))
-        self.decode3 = nn.Sequential(
-            ResidualBlock(32, 3, residual_op = self.resid3),
-            ResidualBlock(3, 3),
-            ResidualBlock(3, 3),
+        self.decode4 = nn.Sequential(
+            conv3x3(32, 3),
+            nn.Sigmoid(),  # sigmoid to make pixels lie in (0, 1)
         )
 
     def reparameterize(self, mu, std):
@@ -86,13 +101,9 @@ class AutoEncoder(nn.Module):
         return mu + eps * std
 
     def encode(self, x):
-        out = self.conv1(x)     # stride 2: reduce dim by 2x
-        out = self.bn1(out)
-        out = self.relu(out)
-        out = self.maxpool(out) # stride 2: reduce dim by 2x
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.avgpool(out) # stride 2: reduce dim by 2x
+        out = self.encode1(x)     # 2x stride 2 => reduce dim by 4x
+        out = self.encode2(out)   # 1x stride 2 => reduce dim by 2x
+        out = self.encode3(out)   # 1x stride 2 => reduce dim by 2x
         out = self.flat(out)
         mu = self.mu_latent(out)
         sig = self.sig_latent(out)
@@ -107,7 +118,7 @@ class AutoEncoder(nn.Module):
         out = self.decode1(zout)
         out = self.decode2(out)
         out = self.decode3(out)
-        out = torch.sigmoid(out) # sigmoid because pixel values in (0, 1)
+        out = self.decode4(out)
         return out
 
     def forward(self, x, attr):
@@ -173,6 +184,8 @@ def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100
     else:
         ae = AutoEncoder()
 
+    total_params = utils.count_parameters(ae)
+    print(f'Model has {total_params} parameters')
     ae = ae.to(DEVICE)
 
     optimizer = torch.optim.Adam(ae.parameters(), lr=1e-3)

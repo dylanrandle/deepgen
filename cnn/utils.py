@@ -27,3 +27,6 @@ def print_attrs(attr, celebA_dataset):
         if a == 1:
             legible += celebA_dataset.attr_names[i] + ", "
     return legible
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
