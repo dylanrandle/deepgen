@@ -106,7 +106,6 @@ class AutoEncoder(nn.Module):
         out = self.flat(out)
         mu = self.mu_latent(out)
         sig = self.sig_latent(out)
-        print(mu.shape)
         return mu, sig
 
     def decode(self, z):
@@ -115,15 +114,10 @@ class AutoEncoder(nn.Module):
         batch_size, new_dim = int(zout.shape[0]), int(np.sqrt(zout.shape[1]))
         zout = zout.view(batch_size, 1, new_dim, new_dim) # reshape to be "image-like"
         # decoding layers
-        print(zout.shape)
         out = self.decode1(zout)
-        print(out.shape)
         out = self.decode2(out)
-        print(out.shape)
         out = self.decode3(out)
-        print(out.shape)
         out = self.decode4(out)
-        print(out.shape)
         return out
 
     def forward(self, x, attr):
