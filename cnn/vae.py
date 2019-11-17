@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+import os
 
 # Follows elements of https://github.com/pytorch/examples/blob/master/vae/main.py
 class AutoEncoder(nn.Module):
@@ -161,19 +162,20 @@ def loss_function(recon_x, x, mu, sig):
     KLD = -0.5 * torch.sum(1 + torch.log(sig.pow(2)) - mu.pow(2) - sig.pow(2))
     return RECON + KLD
 
-def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100, save_examples=False, show_examples=False):
+def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100,
+            save_examples=False, show_examples=False):
     torch.manual_seed(seed)
 
-    if model_path:
+    if model_path and os.path.exists(model_path): # load if exists
         ae = AutoEncoder()
         ae.load_state_dict(torch.load(model_path, map_location=DEVICE))
+        print(f'Loaded existing model from {model_path}')
     else:
         ae = AutoEncoder()
 
     ae = ae.to(DEVICE)
 
     optimizer = torch.optim.Adam(ae.parameters(), lr=1e-3)
-    lr_schedule = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
 
     # Train the model
     total_step = len(train_loader)
@@ -212,11 +214,7 @@ def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100
                     else:
                         plt.show()
 
-        # Save the model checkpoint each epoch
-        save_to = model_path if model_path else 'resnet_autoencoder.ckpt'
+        # Save a model checkpoint each epoch
+        save_to = model_path if model_path else 'vae_resnet_celebA.pt' # use this default path if None provided
         torch.save(ae.state_dict(), save_to)
         print(f'Saved model to {save_to}')
-
-        # Step the learning rate
-        lr_schedule.step()
-        print('New LR = {}'.format(lr_schedule.get_lr()))

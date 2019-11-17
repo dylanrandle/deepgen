@@ -14,8 +14,8 @@ if __name__ == '__main__':
                         help='how many batches to wait before showing progress (default: 100)')
     parser.add_argument('--data_path', type=str, default='~',
                         help='path to downloaded dataset (default: ~)')
-    parser.add_argument('--model_path', type=str, default=None,
-                        help='path to a saved model, for resuming training (default: None)')
+    parser.add_argument('--model_path', type=str, default='vae_resnet_celebA.pt',
+                        help='path to a saved model, for resuming training (default: vae_resnet_celebA.pt)')
     parser.add_argument('--save_examples', action='store_true', default=False,
                         help='whether to save example images to files during training (default: False)')
     parser.add_argument('--show_examples', action='store_true', default=False,
