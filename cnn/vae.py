@@ -161,7 +161,7 @@ def loss_function(recon_x, x, mu, sig):
     KLD = -0.5 * torch.sum(1 + torch.log(sig.pow(2)) - mu.pow(2) - sig.pow(2))
     return RECON + KLD
 
-def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100):
+def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100, save_examples=False, show_examples=False):
     torch.manual_seed(seed)
 
     if model_path:
@@ -196,22 +196,27 @@ def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100
 
             if (i+1) % report_freq == 0:
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(epoch+1, num_epochs, i+1, total_step, loss.item()))
-                fig, ax = plt.subplots(2,5,figsize=(20,6))
-                for i, _ax in enumerate(ax[0,:]):
-                    _ax.imshow(img[i,:,:,:].permute(1,2,0).cpu())
-                    _ax.set_title('Original')
-                for i, _ax in enumerate(ax[1,:]):
-                    _ax.imshow(gen_img[i, :, :, :].permute(1, 2, 0).cpu().detach())
-                    _ax.set_title('Generated')
-                fig.tight_layout()
-                plt.show()
+                if save_examples or show_examples:
+                    fig, ax = plt.subplots(2,5,figsize=(20,6))
+                    for j, _ax in enumerate(ax[0,:]):
+                        _ax.imshow(img[j,:,:,:].permute(1,2,0).cpu())
+                        _ax.set_title('Original')
+                    for j, _ax in enumerate(ax[1,:]):
+                        _ax.imshow(gen_img[j, :, :, :].permute(1, 2, 0).cpu().detach())
+                        _ax.set_title('Generated')
+                    fig.tight_layout()
+                    if save_examples:
+                        save_to = f'Examples_Epoch{epoch+1}_Step{i+1}.png'
+                        plt.savefig(save_to)
+                        print(f'Saved example to {save_to}')
+                    else:
+                        plt.show()
 
         # Save the model checkpoint each epoch
-        if not model_path:
-            torch.save(ae.state_dict(), 'resnet_autoencoder.ckpt')
-        else:
-            torch.save(ae.state_dict(), model_path)
+        save_to = model_path if model_path else 'resnet_autoencoder.ckpt'
+        torch.save(ae.state_dict(), save_to)
+        print(f'Saved model to {save_to}')
 
         # Step the learning rate
         lr_schedule.step()
-        print('new LR = {}'.format(lr_schedule.get_lr()))
+        print('New LR = {}'.format(lr_schedule.get_lr()))

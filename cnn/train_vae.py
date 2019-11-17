@@ -4,7 +4,7 @@ import argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Training Convolutional VAE for CelebA')
-    parser.add_argument('--batch-size', type=int, default=64,
+    parser.add_argument('--batch_size', type=int, default=64,
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=10,
                         help='number of epochs to train (default: 10)')
@@ -16,13 +16,19 @@ if __name__ == '__main__':
                         help='path to downloaded dataset (default: ~)')
     parser.add_argument('--model_path', type=str, default=None,
                         help='path to a saved model, for resuming training (default: None)')
+    parser.add_argument('--save_examples', action='store_true', default=False,
+                        help='whether to save example images to files during training (default: False)')
+    parser.add_argument('--show_examples', action='store_true', default=False,
+                        help='whether to show example images during training (default: False)')
     args = parser.parse_args()
 
-    train_loader, test_loader = utils.load_celebA(data_path = args.data_path)
+    train_loader, test_loader = utils.load_celebA(data_path = args.data_path, batch_size = args.batch_size)
     vae.train(
         train_loader,
         model_path = args.model_path,
         num_epochs = args.epochs,
         seed = args.seed,
         report_freq = args.report_freq,
+        save_examples = args.save_examples,
+        show_examples = args.show_examples,
     )

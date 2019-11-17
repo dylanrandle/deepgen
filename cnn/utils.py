@@ -2,7 +2,7 @@ import torchvision
 import torchvision.transforms as transforms
 import torch
 
-def load_celebA(data_path='~'):
+def load_celebA(data_path='~', batch_size=64):
     transform = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.RandomHorizontalFlip(),
@@ -14,8 +14,8 @@ def load_celebA(data_path='~'):
     cba_test = torchvision.datasets.CelebA(data_path, download=True,
         split='test', transform=transform, target_transform=lambda x: x.float())
 
-    train_loader = torch.utils.data.DataLoader(cba_train, batch_size=64, shuffle=True, pin_memory=True)
-    test_loader = torch.utils.data.DataLoader(cba_test, batch_size=64, shuffle=False, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(cba_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader = torch.utils.data.DataLoader(cba_test, batch_size=batch_size, shuffle=False, pin_memory=True)
     return train_loader, test_loader
 
 def print_attrs(attr, celebA_dataset):
