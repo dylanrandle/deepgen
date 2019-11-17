@@ -12,7 +12,7 @@ class AutoEncoder(nn.Module):
     Uses ResNet-style blocks of convolutions
     Concatenates CelebA attributes to latent dimension
     """
-    def __init__(self, latent_dim = 512, condition_dim = 40):
+    def __init__(self, latent_dim = 128, condition_dim = 40):
         super().__init__()
         self.latent_dim = latent_dim
         self.condition_dim = condition_dim
@@ -33,7 +33,6 @@ class AutoEncoder(nn.Module):
             ResidualBlock(64, 64),
             ResidualBlock(64, 64),
             ResidualBlock(64, 64),
-            self.maxpool,
         )
 
         # third encoding block
@@ -48,12 +47,12 @@ class AutoEncoder(nn.Module):
 
         # projecting the last feature map into latent space (linear)
         self.flat = nn.Flatten()
-        self.mu_latent = nn.Linear(128 * 16 * 16, self.latent_dim)
-        self.sig_latent = nn.Linear(128 * 16 * 16, self.latent_dim)
+        self.mu_latent = nn.Linear(128 * 32 * 32, self.latent_dim)
+        self.sig_latent = nn.Linear(128 * 32 * 32, self.latent_dim)
 
         # projecting out of latent space (non-linear)
         self.project_z = nn.Sequential(
-            nn.Linear(self.latent_dim + self.condition_dim, 128 * 128),
+            nn.Linear(self.latent_dim + self.condition_dim, 32 * 32),
             nn.ReLU(inplace=True),
         )
 
@@ -107,6 +106,7 @@ class AutoEncoder(nn.Module):
         out = self.flat(out)
         mu = self.mu_latent(out)
         sig = self.sig_latent(out)
+        print(mu.shape)
         return mu, sig
 
     def decode(self, z):
@@ -115,10 +115,15 @@ class AutoEncoder(nn.Module):
         batch_size, new_dim = int(zout.shape[0]), int(np.sqrt(zout.shape[1]))
         zout = zout.view(batch_size, 1, new_dim, new_dim) # reshape to be "image-like"
         # decoding layers
+        print(zout.shape)
         out = self.decode1(zout)
+        print(out.shape)
         out = self.decode2(out)
+        print(out.shape)
         out = self.decode3(out)
+        print(out.shape)
         out = self.decode4(out)
+        print(out.shape)
         return out
 
     def forward(self, x, attr):
