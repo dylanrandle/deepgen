@@ -15,7 +15,7 @@ class AutoEncoder(nn.Module):
         self.latent_dim = latent_dim
         self.condition_dim = condition_dim
 
-        # first layer of ResNet
+        # first layer of ResNet-34 (original implementation for ImageNet)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
         self.bn1 = nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
         self.relu = nn.ReLU(inplace=True)
@@ -164,8 +164,13 @@ def loss_function(recon_x, x, mu, sig):
 def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100):
     torch.manual_seed(seed)
 
-    if not model_path:
-        ae = AutoEncoder().to(DEVICE)
+    if model_path:
+        ae = AutoEncoder()
+        ae.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    else:
+        ae = AutoEncoder()
+
+    ae = ae.to(DEVICE)
 
     optimizer = torch.optim.Adam(ae.parameters(), lr=1e-3)
     lr_schedule = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
