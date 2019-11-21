@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import os
 import utils
 
+DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+DEFAULT_MODEL_PATH = 'vae_resnet_celebA.pt'
+
 # Follows elements of https://github.com/pytorch/examples/blob/master/vae/main.py
 class AutoEncoder(nn.Module):
     """
@@ -159,33 +162,37 @@ class ResidualBlock(nn.Module):
         out = self.relu(out)
         return out
 
-DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-mse_loss = torch.nn.MSELoss().to(DEVICE)
-
+MSE_LOSS = torch.nn.MSELoss().to(DEVICE)
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, sig):
-    RECON = mse_loss(recon_x, x)
+    RECON = MSE_LOSS(recon_x, x)
     # see Appendix B from VAE paper:
-    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
     # https://arxiv.org/abs/1312.6114
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + torch.log(sig.pow(2)) - mu.pow(2) - sig.pow(2))
     return RECON + KLD
 
-def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100,
-            save_examples=False, show_examples=False):
+def train(train_loader, model_path = None, num_epochs = 10, seed = 42, report_freq = 100, save_examples = False):
+    """ runs training for AutoEncoder model
+        if model_path not provided, training starts from scratch """
     torch.manual_seed(seed)
-
-    if model_path and os.path.exists(model_path): # load if exists
-        ae = AutoEncoder()
-        ae.load_state_dict(torch.load(model_path, map_location=DEVICE))
-        print(f'Loaded existing model from {model_path}')
+    if model_path:
+        ae = load_model(model_path = model_path)
     else:
-        ae = AutoEncoder()
-
-    total_params = utils.count_parameters(ae)
-    print(f'Model has {total_params} parameters')
-    ae = ae.to(DEVICE)
+        # model_path not provided => will save to default path
+        # check if default path exists and ask user what to do
+        if os.path.exists(DEFAULT_MODEL_PATH):
+            print(f'Detected a model already saved at {DEFAULT_MODEL_PATH} (the default model path)')
+            print('Would you like to resume (r) training of this model or start from scratch and overwrite (o) it?')
+            answer = input('Resume (r) / Overwrite (o): ').strip().lower()
+            if answer == 'r':
+                ae = load_model(model_path = DEFAULT_MODEL_PATH)
+            elif answer == 'o':
+                ae = create_model()
+            else:
+                raise ValueError(f'You response "{answer}" was not understood.')
+        else: # no concern of overwriting
+            ae = create_model()
 
     optimizer = torch.optim.Adam(ae.parameters(), lr=1e-3)
 
@@ -210,23 +217,57 @@ def train(train_loader, model_path=None, num_epochs=10, seed=42, report_freq=100
 
             if (i+1) % report_freq == 0:
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}".format(epoch+1, num_epochs, i+1, total_step, loss.item()))
-                if save_examples or show_examples:
-                    fig, ax = plt.subplots(2,5,figsize=(20,6))
-                    for j, _ax in enumerate(ax[0,:]):
-                        _ax.imshow(img[j,:,:,:].permute(1,2,0).cpu())
-                        _ax.set_title('Original')
-                    for j, _ax in enumerate(ax[1,:]):
-                        _ax.imshow(gen_img[j, :, :, :].permute(1, 2, 0).cpu().detach())
-                        _ax.set_title('Generated')
-                    fig.tight_layout()
-                    if save_examples:
-                        save_to = f'Examples_Epoch{epoch+1}_Step{i+1}.png'
-                        plt.savefig(save_to)
-                        print(f'Saved example to {save_to}')
-                    else:
-                        plt.show()
+                if save_examples:
+                    save_to = f'TrainExamples_Epoch{epoch+1}_Step{i+1}.png'
+                    utils.make_examples(img, gen_img, save_to = save_to)
 
-        # Save a model checkpoint each epoch
-        save_to = model_path if model_path else 'vae_resnet_celebA.pt' # use this default path if None provided
+        # Save model after each epoch
+        save_to = model_path if model_path else DEFAULT_MODEL_PATH # use this default path if None provided
         torch.save(ae.state_dict(), save_to)
         print(f'Saved model to {save_to}')
+
+def test(test_loader, model_path, report_freq = 100, save_examples = False):
+    """ runs a saved model over test data. user must provide model_path. """
+    ae = load_model(model_path = model_path)
+    ae.eval()
+
+    total_step = len(test_loader)
+    test_loss = 0
+    with torch.no_grad():
+        for i, (img, attr) in enumerate(test_loader):
+            img = img.to(DEVICE)
+            gen_img, mu, sig = ae(img, attr)
+            loss = loss_function(gen_img, img, mu, sig)
+            test_loss += loss.item()
+            if (i + 1) % report_freq == 0:
+                print("Step [{}/{}] Test Loss: {:.4f}".format(i+1, total_step, loss.item()))
+                if save_examples:
+                    save_to = f'TestExamples_Step{i+1}.png'
+                    utils.make_examples(img, gen_img, save_to = save_to)
+
+    test_loss /= total_step
+    print('====> Test set loss: {:.4f}'.format(test_loss))
+
+def load_model(model_path):
+    """ helper function to load model if given path exists
+        otherwise creates new object and returns it """
+    if not os.path.exists(model_path):
+        raise RuntimeError(f'Could not find provided model_path: {model_path}')
+
+    ae = AutoEncoder()
+    ae.load_state_dict(torch.load(model_path, map_location=DEVICE))
+    print(f'Loaded existing model from {model_path}')
+
+    total_params = utils.count_parameters(ae)
+    print(f'Model has {total_params} parameters')
+    ae = ae.to(DEVICE)
+    return ae
+
+def create_model():
+    """ helper function to instantiate new model """
+    ae = AutoEncoder()
+    print('Loaded new AutoEncoder model')
+    total_params = utils.count_parameters(ae)
+    print(f'Model has {total_params} parameters')
+    ae = ae.to(DEVICE)
+    return ae
