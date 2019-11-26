@@ -2,6 +2,8 @@
 
 **Deep convolutional neural networks for generative modeling (VAE, GANs, etc.)**
 
+![vae_gif](examples/Gif-2019-52-26-09-52-24.gif)
+
 ## Requirements
 Tested with:
 - `python==3.7`
@@ -17,7 +19,12 @@ Tested with:
 
 ## Simple usage
 
-Note: set `--report_freq` and `--batch_size` properly according to your needs. The former specifies how often to save examples and report losses, while the latter must be appropriate for the computational and memory resources you are running on (i.e. locally, use batch size 1, but on a GPU maybe 32, 64, etc.). 
+Run `python cnn/run_vae.py -h` to see a list of available arguments.
 
-- To train a ResNet-style (Conditional) Variational Autoencoder on the CelebA dataset: `python cnn/run_vae.py --train --save_examples` (add `-h` for available arguments)
-- To test a trained model: `python cnn/run_vae.py --test --save_examples --model_path /path/to/you/fancy/model`
+### Train ResNet-style (Conditional) Variational Autoencoder:
+- `python cnn/run_vae.py --train --save_examples`
+
+### Test Trained Model:
+- `python cnn/run_vae.py --test --save_examples --model_path /path/to/model`
+
+- *Note:* be careful to set `--report_freq` and `--batch_size` properly. The former specifies how often to save examples and report losses (i.e. controls how spammy the output is), while the latter specifies how many examples will be batched together and must be appropriate for your computational and memory resources (I like batch size 1 for local development and use batch size 32 on a GPU,  but for performance the largest possible batch size for your device is ideal).
