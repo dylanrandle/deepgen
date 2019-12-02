@@ -2,7 +2,7 @@
 
 *Deep convolutional neural networks for generative modeling (i.e. VAEs, GANs, etc.)*
 
-![vae_gif](examples/Gif-2019-52-26-09-52-24.gif)
+![test_examples](examples/gif_test_examples.gif)
 
 ## Requirements
 Tested with:
@@ -29,6 +29,19 @@ Run `python cnn/run_vae.py -h` to see a list of available arguments.
 - `python cnn/run_vae.py --test --save_examples --model_path /path/to/model`
 
 *Note:* be careful to set `--report_freq` and `--batch_size` properly. The former specifies how often to save examples and report losses (i.e. controls how spammy the output is), while the latter specifies how many examples will be batched together and must be appropriate for your computational and memory resources (I like batch size 1 for local development and use batch size 32 on a GPU,  but for performance the largest possible batch size is best).
+
+### Play with Conditional Attributes
+
+CelebA gives us access to 40 attributes (e.g. '5_o_Clock_Shadow', 'Arched_Eyebrows') which we have concatenated with the latent vector during training. By changing these attributes manually, we can have a bit of fun tweaking faces. To try this, run:
+- `python cnn/toggle_attributes.py --img_path ... --model_path ...`
+
+Note that I have set defaults for all of the attributes because checking every combination would require 2^40 forward passes and is thus prohibitively expensive. The script iterates over each attribute and flips them on/off and outputs the results side-by-side. Below is an example I generated using my own profile photo.
+
+![new_faces](examples/gif_new_faces.gif)
+
+I have compiled all of the positive changes (i.e. <attribute> = `True`) into one static figure:
+
+![attr_matrix](examples/all_attr_matrix.png)
 
 ## References
 - [Deep Conditional Generative Models](https://pdfs.semanticscholar.org/3f25/e17eb717e5894e0404ea634451332f85d287.pdf)

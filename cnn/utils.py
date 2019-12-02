@@ -2,6 +2,7 @@ import torchvision
 import torchvision.transforms as transforms
 import torch
 import matplotlib.pyplot as plt
+from PIL import Image
 
 def load_celebA(data_path='~', batch_size=64):
     """ helper function to load CelebA dataset using built-in pytorch methods """
@@ -19,6 +20,13 @@ def load_celebA(data_path='~', batch_size=64):
     train_loader = torch.utils.data.DataLoader(cba_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader = torch.utils.data.DataLoader(cba_test, batch_size=batch_size, shuffle=False, pin_memory=True)
     return train_loader, test_loader
+
+def load_img(img_path):
+    """ helper function to load an image with PIL and transform for model """
+    img = Image.open(img_path)
+    img = transforms.Resize((256, 256))(img)
+    img = transforms.ToTensor()(img)
+    return img
 
 def print_attrs(attr, celebA_dataset):
     """
