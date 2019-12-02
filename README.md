@@ -39,9 +39,9 @@ Note that I have set defaults for all of the attributes because checking every c
 
 ![new_faces](examples/gif_new_faces.gif)
 
-I have compiled all of the positive changes (i.e. <attribute> = `True`) into one static figure:
+I have compiled all of the positive changes (i.e. attributes = `True`) into the figure below; the only change between the two frames of the GIF is the value of the default attribute of "Smiling" (to show how default attributes affect the image globally).
 
-![attr_matrix](examples/all_attr_matrix.png)
+![attr_matrix](examples/all_attr_matrix.gif)
 
 ## References
 - [Deep Conditional Generative Models](https://pdfs.semanticscholar.org/3f25/e17eb717e5894e0404ea634451332f85d287.pdf)
