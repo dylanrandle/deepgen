@@ -43,5 +43,9 @@ I have compiled all of the positive changes (i.e. attributes = `True`) into the 
 
 ![attr_matrix](examples/all_attr_matrix.gif)
 
+*Note:* there are many different ways of including the attributes in the training process. Here I have simply concatenated them with the latent vector. Other approaches could be, for example:
+- direct learning (i.e. as regression from image to latent space)
+- computing a transformation by taking the difference in mean latent vectors for examples with and without an attribute
+
 ## References
 - [Deep Conditional Generative Models](https://pdfs.semanticscholar.org/3f25/e17eb717e5894e0404ea634451332f85d287.pdf)
