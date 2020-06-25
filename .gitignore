@@ -105,3 +105,9 @@ venv.bak/
 
 # Mac Cache
 .DS_Store
+
+# examples
+examples/
+
+# models
+models/

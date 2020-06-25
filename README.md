@@ -2,7 +2,7 @@
 
 *Deep convolutional neural networks for generative modeling (i.e. VAEs, GANs, etc.)*
 
-![test_examples](examples/gif_test_examples.gif)
+![test_examples](img/deepgen.gif)
 
 ## Requirements
 Tested with:
@@ -37,11 +37,11 @@ CelebA gives us access to 40 attributes (e.g. '5_o_Clock_Shadow', 'Arched_Eyebro
 
 Note that I have set defaults for all of the attributes because checking every combination would require 2^40 forward passes and is thus prohibitively expensive. The script iterates over each attribute and flips them on/off and outputs the results side-by-side. Below is an example I generated using my own profile photo.
 
-![new_faces](examples/gif_new_faces.gif)
+![new_faces](img/gif_new_faces.gif)
 
 I have compiled all of the positive changes (i.e. attributes = `True`) into the figure below; the only change between the two frames of the GIF is the value of the default attribute of "Smiling" (to show how default attributes affect the image globally).
 
-![attr_matrix](examples/all_attr_matrix.gif)
+![attr_matrix](img/all_attr_matrix.gif)
 
 *Note:* there are many different ways of including the attributes in the training process. Here I have simply concatenated them with the latent vector. Other approaches could be, for example:
 - direct learning (i.e. as regression from image to latent space)

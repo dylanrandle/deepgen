@@ -244,6 +244,8 @@ def test(test_loader, model_path, report_freq = 100, save_examples = False):
                 if save_examples:
                     save_to = f'TestExamples_Step{i+1}.png'
                     utils.make_examples(img, gen_img, save_to = save_to)
+                    save_pretty = f'TestExamplesPretty_Step{i+1}.png'
+                    utils.make_examples_pretty(img, gen_img, save_to = save_pretty)
 
     test_loss /= total_step
     print('====> Test set loss: {:.4f}'.format(test_loss))

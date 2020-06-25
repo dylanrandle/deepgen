@@ -60,3 +60,24 @@ def make_examples(img, gen_img, save_to):
     plt.savefig(save_to)
     print(f'Saved example to {save_to}')
     plt.close(fig)
+
+def make_examples_pretty(img, gen_img, save_to):
+    """ plot real and generated images, then save them """
+    batch_size = img.shape[0]
+    num_examples = 15 if batch_size >= 15 else batch_size # default to 15 examples
+
+    nrow = 3
+    ncol = num_examples//nrow
+    figsize = (int(5*ncol), int(5*nrow))
+
+    fig, ax = plt.subplots(nrow, ncol, figsize=figsize)
+    ax = ax.ravel()
+    for j, _ax in enumerate(ax):
+        _ax.imshow(gen_img[j, :, :, :].permute(1, 2, 0).cpu().detach())
+        _ax.set_xticks([])
+        _ax.set_yticks([])
+    fig.tight_layout()
+
+    plt.savefig(save_to)
+    print(f'Saved example to {save_to}')
+    plt.close(fig)
